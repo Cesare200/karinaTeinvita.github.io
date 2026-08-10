@@ -601,11 +601,10 @@
   });
 
   // ---------- MÚSICA DE FONDO (music.mp3) ----------
-  // Los navegadores bloquean el audio con sonido hasta que hay una interacción
-  // del usuario. Intentamos reproducir apenas carga la página; si el navegador
-  // lo bloquea, queda lista para sonar en el primer toque/click en cualquier
-  // parte de la pantalla. El botón redondo arriba a la derecha permite
-  // silenciar o volver a activar el sonido en cualquier momento.
+  // La música intenta sonar automáticamente al cargar la página.
+  // Si el navegador lo bloquea (política de autoplay), se activa con el primer
+  // toque/click del usuario en cualquier parte de la página.
+  // El botón redondo arriba a la derecha permite silenciar o reactivar el sonido.
   (function () {
     const music = document.getElementById('bg-music');
     const toggleBtn = document.getElementById('sound-toggle');
@@ -627,23 +626,31 @@
       }
     }
 
-    // Intento inicial (funciona en algunos navegadores/desktop)
+    // Intento inicial: la música arranca apenas se carga la página.
     document.addEventListener('DOMContentLoaded', tryPlay);
 
-    // Si el navegador bloqueó el autoplay, arranca con el primer toque/click
-    const unlockEvents = ['touchstart', 'click', 'scroll'];
-    function unlockOnce(){
-      if (!userMuted && music.paused) tryPlay();
+    // Si el navegador bloqueó el autoplay, se activa con el primer toque/click en la página.
+    // Esto es necesario en móviles y navegadores modernos.
+    const unlockEvents = ['touchstart', 'click'];
+    function unlockOnce(e){
+      if (!userMuted && music.paused) {
+        tryPlay();
+      }
       unlockEvents.forEach(evt => document.removeEventListener(evt, unlockOnce));
     }
     unlockEvents.forEach(evt => document.addEventListener(evt, unlockOnce, { once: true, passive: true }));
 
     // Botón manual de silencio / reactivar
-    toggleBtn.addEventListener('click', () => {
+    toggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation(); // Evita que el click en el botón dispare el unlockOnce
       if (music.paused) {
-        userMuted = false;
+        // Si está pausado, lo reactivamos (solo si no está silenciado por usuario)
+        if (userMuted) {
+          userMuted = false;
+        }
         tryPlay();
       } else {
+        // Si está sonando, lo pausamos
         music.pause();
         userMuted = true;
         showPlayingIcon(false);
